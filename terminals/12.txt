@@ -1,0 +1,14 @@
+---
+pid: 15920
+cwd: "C:\Users\shikagera\AndroidStudioProjects\TimeBalance"
+command: "$adb = \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\"; if (Test-Path $adb) { & $adb logcat -d -t 80 *:E 2>&1 } else { Write-Output \"adb not found\" }"
+started_at: 2026-07-09T14:16:36.360Z
+running_for_ms: 7834991  
+---
+adb.exe : - waiting for device -
+��ப�:1 ����:86
++ ... b.exe"; if (Test-Path $adb) { & $adb logcat -d -t 80 *:E 2>&1 } else  ...
++                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (- waiting for device -:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

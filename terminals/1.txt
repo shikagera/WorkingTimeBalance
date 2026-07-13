@@ -1,0 +1,13 @@
+---
+pid: 6508
+cwd: "C:\Users\shikagera\AndroidStudioProjects\TimeBalance"
+command: "Get-ChildItem -Path \"C:\\Program Files\",\"C:\\Program Files (x86)\",\"$env:LOCALAPPDATA\" -Filter \"java.exe\" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5 FullName"
+started_at: 2026-07-09T12:22:12.941Z
+running_for_ms: 14699997 
+---
+
+FullName                                                
+--------                                                
+C:\Program Files\Android\openjdk\jdk-21.0.8\bin\java.exe
+
+

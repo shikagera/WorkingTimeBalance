@@ -1,0 +1,97 @@
+---
+pid: 16328
+cwd: "C:\Users\shikagera\AndroidStudioProjects\TimeBalance"
+command: "$env:JAVA_HOME = \"C:\\Program Files\\Android\\openjdk\\jdk-21.0.8\"; Set-Location \"C:\\Users\\shikagera\\AndroidStudioProjects\\TimeBalance\"; .\\gradlew.bat test assembleDebug --no-daemon 2>&1"
+started_at: 2026-07-09T12:33:03.853Z
+running_for_ms: 14050008 
+---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.disallowKotlinSourceSets=false' is experimental.
+The current default is 'true'.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugResources
+> Task :app:kspDebugKotlin
+> Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
+> Task :app:compileDebugKotlin
+> Task :app:mergeExtDexDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeLibDexDebug
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so. Run with --info option to learn more.
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera1/ui/MainViewModel.kt:98:75 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera1/ui/MainViewModel.kt:211:69 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera1/ui/MainViewModel.kt:212:78 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+
+> Task :app:testDebugUnitTest
+
+BalanceCalculatorTest > weekBalance_includesCarryoverWithinPeriod FAILED
+    java.lang.AssertionError at BalanceCalculatorTest.kt:37
+
+> Task :app:testDebugUnitTest FAILED
+.\gradlew.bat : 
+��ப�:1 ����:134
++ ... jects\TimeBalance"; .\gradlew.bat test assembleDebug --no-daemon 2>&1
++                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+15 tests completed, 1 failed
+44 actionable tasks: 25 executed, 19 up-to-date
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/build/r
+eports/tests/testDebugUnitTest/index.html
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+BUILD FAILED in 1m 30s

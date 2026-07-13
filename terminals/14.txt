@@ -1,0 +1,31 @@
+---
+pid: 14556
+cwd: "C:\Users\shikagera\AndroidStudioProjects\TimeBalance"
+command: "$env:JAVA_HOME = \"C:\\Program Files\\Android\\openjdk\\jdk-21.0.8\"; Set-Location \"C:\\Users\\shikagera\\AndroidStudioProjects\\TimeBalance\"; .\\gradlew.bat test --tests \"com.example.shikagera1.domain.TimeParserTest\" --no-daemon 2>&1"
+started_at: 2026-07-09T14:48:15.325Z
+running_for_ms: 5939997  
+---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.disallowKotlinSourceSets=false' is experimental.
+The current default is 'true'.
+.\gradlew.bat : 
+��ப�:1 ����:134
++ ... meBalance"; .\gradlew.bat test --tests "com.example.shikagera1.domain ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+* What went wrong:
+Problem configuring task :app:test from command line.
+> Unknown command-line option '--tests'.
+* Try:
+> Run gradlew help --task :app:test to get task usage details.
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+BUILD FAILED in 25s

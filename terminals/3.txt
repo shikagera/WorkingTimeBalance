@@ -1,0 +1,68 @@
+---
+pid: 11896
+cwd: "C:\Users\shikagera\AndroidStudioProjects\TimeBalance"
+command: "$env:JAVA_HOME = \"C:\\Program Files\\Android\\openjdk\\jdk-21.0.8\"; Set-Location \"C:\\Users\\shikagera\\AndroidStudioProjects\\TimeBalance\"; .\\gradlew.bat test assembleDebug --no-daemon 2>&1"
+started_at: 2026-07-09T12:25:55.859Z
+running_for_ms: 14479997 
+---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.disallowKotlinSourceSets=false' is experimental.
+The current default is 'true'.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:processDebugNavigationResources
+> Task :app:parseDebugLocalResources
+> Task :app:javaPreCompileDebug
+> Task :app:generateDebugRFile
+> Task :app:checkDebugAarMetadata
+> Task :app:kspDebugKotlin
+> Task :app:mapDebugSourceSetPaths
+> Task :app:compileDebugNavigationResources
+> Task :app:compileDebugKotlin
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+
+> Task :app:compileDebugKotlin FAILED
+
+> Task :app:generateDebugGlobalSynthetics
+> Task :app:processDebugManifestForPackage
+21 actionable tasks: 21 executed
+.\gradlew.bat : e: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera
+1/ui/MainViewModel.kt:92:45 Unresolved reference 'map'.
+��ப�:1 ����:134
++ ... jects\TimeBalance"; .\gradlew.bat test assembleDebug --no-daemon 2>&1
++                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e: file:///C:/U...eference 'map'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+e: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera1/ui/MainViewMod
+el.kt:92:51 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///C:/Users/shikagera/AndroidStudioProjects/TimeBalance/app/src/main/java/com/example/shikagera1/ui/MainViewMod
+el.kt:96:33 Unresolved reference 'dayOfWeek'.
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCo
+mpilerWorkAction
+   > Compilation error. See log for more details
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+BUILD FAILED in 6m 54s
