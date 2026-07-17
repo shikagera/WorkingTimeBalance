@@ -42,6 +42,10 @@ data class MainUiState(
     val todayRecord: DayRecord? = null,
     val isDayClosed: Boolean = false,
     val predictedDeparture: String? = null,
+    /** Minutes from midnight for predicted leave; used by live countdown timer. */
+    val predictedDepartureMinutes: Int? = null,
+    /** Arrival minutes from midnight when day is open; drives live elapsed timer. */
+    val activeArrivalMinutes: Int? = null,
     val currentWeekDays: List<WeekDayItem> = emptyList(),
     val previousWeekDays: List<WeekDayItem> = emptyList(),
     val showResetWarning: Boolean = false,
@@ -369,17 +373,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             manualResetDate = manualResetDate,
         )
 
-        val predictedDeparture = if (!isDayClosed) {
+        val predictedDepartureMinutes = if (!isDayClosed) {
             todayRecord?.arrivalMinutes?.let { arrival ->
                 LeaveTimePredictor.predictedDepartureMinutes(
                     arrivalMinutes = arrival,
                     balanceBeforeToday = balanceBeforeToday,
                     date = currentDate,
-                )?.let(TimeParser::formatMinutes)
+                )
             }
         } else {
             null
         }
+        val predictedDeparture = predictedDepartureMinutes?.let(TimeParser::formatMinutes)
+        val activeArrivalMinutes = if (!isDayClosed) todayRecord?.arrivalMinutes else null
 
         val locale = Locale.forLanguageTag("ru")
         val currentWeekDays = WorkWeekCalculator.visibleWorkDays(currentDate)
@@ -399,6 +405,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             todayRecord = todayRecord,
             isDayClosed = isDayClosed,
             predictedDeparture = predictedDeparture,
+            predictedDepartureMinutes = predictedDepartureMinutes,
+            activeArrivalMinutes = activeArrivalMinutes,
             currentWeekDays = currentWeekDays,
             previousWeekDays = previousWeekDays,
             showResetWarning = showBanner,

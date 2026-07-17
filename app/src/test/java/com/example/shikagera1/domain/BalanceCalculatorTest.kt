@@ -26,15 +26,20 @@ class BalanceCalculatorTest {
     }
 
     @Test
-    fun currentWeekBalance_countsOnlyCurrentMonToFri() {
-        val today = LocalDate.of(2026, 7, 9)
+    fun currentWeekBalance_includesPeriodDaysAcrossCalendarWeeks() {
+        // Period starts on the 8th; Mon 13th should still count Wed–Fri of previous week.
+        val today = LocalDate.of(2026, 7, 13)
         val records = listOf(
-            DayRecord(LocalDate.of(2026, 7, 6), 9 * 60, 18 * 60),
-            DayRecord(LocalDate.of(2026, 7, 7), 9 * 60, 17 * 60 + 45),
+            // Before period start — ignored
+            DayRecord(LocalDate.of(2026, 7, 7), 9 * 60, 18 * 60),
+            // Previous calendar week, inside period: +15 each
             DayRecord(LocalDate.of(2026, 7, 8), 9 * 60, 18 * 60),
-            DayRecord(LocalDate.of(2026, 7, 9), 9 * 60, 17 * 60 + 45),
+            DayRecord(LocalDate.of(2026, 7, 9), 9 * 60, 18 * 60),
+            DayRecord(LocalDate.of(2026, 7, 10), 9 * 60, 18 * 60),
+            // Current week Monday: 0
+            DayRecord(LocalDate.of(2026, 7, 13), 9 * 60, 17 * 60 + 45),
         )
-        assertEquals(15, BalanceCalculator.currentWeekBalance(records, today))
+        assertEquals(45, BalanceCalculator.currentWeekBalance(records, today))
     }
 
     @Test
@@ -46,6 +51,19 @@ class BalanceCalculatorTest {
             DayRecord(LocalDate.of(2026, 7, 8), 9 * 60, 17 * 60 + 45),
         )
         assertEquals(0, BalanceCalculator.currentWeekBalance(records, today))
+    }
+
+    @Test
+    fun totalBalance_carriesPreviousWeekWithinPeriod() {
+        val today = LocalDate.of(2026, 7, 13)
+        val records = listOf(
+            DayRecord(LocalDate.of(2026, 7, 10), 9 * 60, 18 * 60), // +15 Fri
+            DayRecord(LocalDate.of(2026, 7, 13), 9 * 60, 18 * 60), // +15 Mon
+        )
+        assertEquals(
+            30,
+            BalanceCalculator.totalBalance(records, accumulatedBalanceMinutes = 0, today),
+        )
     }
 
     @Test

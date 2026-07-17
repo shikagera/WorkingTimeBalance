@@ -62,4 +62,13 @@ object TimeParser {
         val mins = absolute % 60
         return "$sign${hours}ч ${mins}м"
     }
+
+    /** Formats a non-negative duration as H:MM:SS or HH:MM:SS. */
+    fun formatDurationSeconds(totalSeconds: Int): String {
+        val safe = totalSeconds.coerceAtLeast(0)
+        val hours = safe / 3600
+        val minutes = (safe % 3600) / 60
+        val seconds = safe % 60
+        return "%d:%02d:%02d".format(hours, minutes, seconds)
+    }
 }

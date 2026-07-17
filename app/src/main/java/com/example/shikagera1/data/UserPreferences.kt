@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.shikagera1.domain.PeriodCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -17,6 +18,7 @@ class UserPreferences(private val context: Context) {
     private val lastWarningBannerDateKey = stringPreferencesKey("last_warning_banner_date")
     private val accumulatedBalanceKey = intPreferencesKey("accumulated_balance_minutes")
     private val manualResetDateKey = stringPreferencesKey("manual_reset_date")
+    private val accumulatedPeriodStartKey = stringPreferencesKey("accumulated_period_start")
 
     val lastWarningBannerDate: Flow<LocalDate?> = context.dataStore.data.map { prefs ->
         prefs[lastWarningBannerDateKey]?.let(LocalDate::parse)
@@ -33,6 +35,22 @@ class UserPreferences(private val context: Context) {
     suspend fun setLastWarningBannerDate(date: LocalDate) {
         context.dataStore.edit { prefs ->
             prefs[lastWarningBannerDateKey] = date.toString()
+        }
+    }
+
+    /**
+     * Zero carry-over when a new pay period starts (8th / 23rd).
+     */
+    suspend fun syncPeriodAccumulatedBalance(
+        today: LocalDate = LocalDate.now(),
+        periodStart: LocalDate = PeriodCalculator.currentPeriodStart(today),
+    ) {
+        context.dataStore.edit { prefs ->
+            val stored = prefs[accumulatedPeriodStartKey]
+            if (stored != periodStart.toString()) {
+                prefs[accumulatedBalanceKey] = 0
+                prefs[accumulatedPeriodStartKey] = periodStart.toString()
+            }
         }
     }
 

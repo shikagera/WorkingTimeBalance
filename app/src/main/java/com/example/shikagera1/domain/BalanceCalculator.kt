@@ -39,6 +39,10 @@ object BalanceCalculator {
         return manualResetDate == null || recordDate.isAfter(manualResetDate)
     }
 
+    /**
+     * Balance of all days from the period reset (8th/23rd) through [today],
+     * including previous calendar weeks still inside the period.
+     */
     fun currentWeekBalance(
         records: List<DayRecord>,
         today: LocalDate = LocalDate.now(),
@@ -47,8 +51,7 @@ object BalanceCalculator {
         val autoResetDate = lastWeeklyResetDate(today)
         return records
             .filter { record ->
-                WorkWeekCalculator.isInCurrentWorkWeek(record.date, today) &&
-                    !record.date.isAfter(today) &&
+                !record.date.isAfter(today) &&
                     !record.date.isBefore(autoResetDate) &&
                     isAfterManualReset(record.date, manualResetDate)
             }
@@ -63,15 +66,14 @@ object BalanceCalculator {
         manualResetDate: LocalDate? = null,
     ): Int {
         val autoResetDate = lastWeeklyResetDate(today)
-        val weekBefore = records
+        val periodBefore = records
             .filter { record ->
-                WorkWeekCalculator.isInCurrentWorkWeek(record.date, today) &&
-                    record.date.isBefore(date) &&
+                record.date.isBefore(date) &&
                     !record.date.isBefore(autoResetDate) &&
                     isAfterManualReset(record.date, manualResetDate)
             }
             .sumOf(::dailyBalance)
-        return accumulatedBalanceMinutes + weekBefore
+        return accumulatedBalanceMinutes + periodBefore
     }
 
     fun totalBalance(

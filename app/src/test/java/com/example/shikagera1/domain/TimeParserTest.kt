@@ -70,4 +70,12 @@ class TimeParserTest {
     fun formatBalance_negative() {
         assertEquals("−0ч 30м", TimeParser.formatBalance(-30))
     }
+
+    @Test
+    fun formatDurationSeconds() {
+        assertEquals("0:00:00", TimeParser.formatDurationSeconds(0))
+        assertEquals("0:01:05", TimeParser.formatDurationSeconds(65))
+        assertEquals("2:30:15", TimeParser.formatDurationSeconds(2 * 3600 + 30 * 60 + 15))
+        assertEquals("0:00:00", TimeParser.formatDurationSeconds(-10))
+    }
 }

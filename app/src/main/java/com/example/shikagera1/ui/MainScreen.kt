@@ -23,9 +23,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,7 +41,11 @@ import androidx.compose.ui.unit.sp
 import com.example.shikagera1.domain.DayRecord
 import com.example.shikagera1.domain.TimeParser
 import com.example.shikagera1.ui.components.TimeInputField
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.delay
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -109,8 +115,19 @@ fun MainScreen(viewModel: MainViewModel) {
                 item {
                     Text(
                         text = "Можно уйти в $predicted",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
                         color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            state.activeArrivalMinutes?.let { arrivalMinutes ->
+                item {
+                    LiveWorkTimers(
+                        arrivalMinutes = arrivalMinutes,
+                        predictedDepartureMinutes = state.predictedDepartureMinutes,
                     )
                 }
             }
@@ -338,6 +355,90 @@ private fun ExcludeSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun LiveWorkTimers(
+    arrivalMinutes: Int,
+    predictedDepartureMinutes: Int?,
+) {
+    var nowEpochMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(arrivalMinutes, predictedDepartureMinutes) {
+        while (true) {
+            nowEpochMs = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
+
+    val zone = ZoneId.systemDefault()
+    val todayStart = LocalDate.now(zone).atStartOfDay(zone)
+    val arrivalInstant = todayStart.plusMinutes(arrivalMinutes.toLong()).toInstant()
+    val elapsedSeconds = ChronoUnit.SECONDS
+        .between(arrivalInstant, java.time.Instant.ofEpochMilli(nowEpochMs))
+        .toInt()
+        .coerceAtLeast(0)
+
+    val countdownSeconds = predictedDepartureMinutes?.let { leaveMinutes ->
+        val leaveInstant = todayStart.plusMinutes(leaveMinutes.toLong()).toInstant()
+        ChronoUnit.SECONDS
+            .between(java.time.Instant.ofEpochMilli(nowEpochMs), leaveInstant)
+            .toInt()
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TimerRow(
+                label = "На работе",
+                value = TimeParser.formatDurationSeconds(elapsedSeconds),
+                valueColor = MaterialTheme.colorScheme.onSurface,
+            )
+            if (countdownSeconds != null) {
+                if (countdownSeconds > 0) {
+                    TimerRow(
+                        label = "До ухода",
+                        value = TimeParser.formatDurationSeconds(countdownSeconds),
+                        valueColor = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Text(
+                        text = "Можно уходить",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerRow(label: String, value: String, valueColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = valueColor,
+        )
     }
 }
 
