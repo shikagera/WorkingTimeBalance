@@ -32,13 +32,13 @@ class TimeParserTest {
     }
 
     @Test
-    fun isHoursComplete_singleDigitThreeToNine() {
+    fun isHoursComplete_singleDigitTwoToNine() {
         assertTrue(TimeParser.isHoursComplete("8"))
-        assertTrue(TimeParser.isHoursComplete("3"))
+        assertTrue(TimeParser.isHoursComplete("2"))
+        assertTrue(TimeParser.isHoursComplete("6"))
         assertTrue(TimeParser.isHoursComplete("09"))
         assertTrue(TimeParser.isHoursComplete("17"))
         assertFalse(TimeParser.isHoursComplete("1"))
-        assertFalse(TimeParser.isHoursComplete("2"))
         assertFalse(TimeParser.isHoursComplete("0"))
         assertFalse(TimeParser.isHoursComplete(""))
     }

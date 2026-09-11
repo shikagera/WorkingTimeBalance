@@ -26,7 +26,7 @@ import com.example.shikagera1.domain.TimeFieldInput
 import com.example.shikagera1.domain.TimeParser
 
 /**
- * Два поля «ЧЧ : ММ». Как только часы набраны (две цифры, либо одна «3»…«9»),
+ * Два поля «ЧЧ : ММ». Как только часы набраны (две цифры, либо одна «2»…«9»),
  * фокус сам перескакивает на минуты. Enter/Done на минутах вызывает [onDone].
  */
 @Composable

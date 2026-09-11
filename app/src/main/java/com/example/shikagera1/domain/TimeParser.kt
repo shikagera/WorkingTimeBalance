@@ -26,8 +26,8 @@ object TimeParser {
     const val TIME_INPUT_HINT = "Введите часы и минуты, например 8 : 10"
 
     /**
-     * Часы: до двух цифр. «3»…«9» — это уже целый час, вторая цифра
-     * сделала бы значение больше 23, поэтому она отбрасывается.
+     * Часы: до двух цифр. Вернувшись в поле, можно дописать «20»…«23»;
+     * вторая цифра, дающая больше 23, отбрасывается.
      */
     fun sanitizeHours(input: String): String {
         val digits = input.filter { it.isDigit() }.take(2)
@@ -45,9 +45,13 @@ object TimeParser {
         return digits
     }
 
-    /** Часы набраны полностью — пора переходить к минутам. */
+    /**
+     * Часы набраны полностью — пора переходить к минутам.
+     * Первая цифра «2»…«9» — это уже целый час (6 → 06:__);
+     * вторую цифру ждём только после «0» и «1».
+     */
     fun isHoursComplete(hours: String): Boolean {
-        return hours.length == 2 || (hours.length == 1 && hours[0] >= '3')
+        return hours.length == 2 || (hours.length == 1 && hours[0] >= '2')
     }
 
     fun isMinutesComplete(minutes: String): Boolean = minutes.length == 2
