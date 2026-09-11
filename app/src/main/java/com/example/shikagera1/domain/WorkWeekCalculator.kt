@@ -18,13 +18,11 @@ object WorkWeekCalculator {
     }
 
     /**
-     * Keep previous calendar week for history UI, and the whole current period
-     * so carry-over balance is not lost when early period days would otherwise expire.
+     * История хранится [WorkConstants.RETENTION_MONTHS] мес. назад — это всегда
+     * покрывает и прошлую неделю, и весь текущий период.
      */
     fun retentionStartDate(today: LocalDate = LocalDate.now()): LocalDate {
-        val previousMonday = previousWeekMonday(today)
-        val periodStart = PeriodCalculator.currentPeriodStart(today)
-        return minOf(previousMonday, periodStart)
+        return today.minusMonths(WorkConstants.RETENTION_MONTHS)
     }
 
     fun isWorkday(date: LocalDate): Boolean {

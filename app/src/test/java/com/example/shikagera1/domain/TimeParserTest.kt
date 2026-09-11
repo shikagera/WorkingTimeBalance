@@ -8,57 +8,68 @@ import org.junit.Test
 
 class TimeParserTest {
     @Test
-    fun formatInputDisplay_fourDigits() {
-        assertEquals("14:44", TimeParser.formatInputDisplay("1444"))
+    fun sanitizeHours_keepsUpToTwoDigits() {
+        assertEquals("", TimeParser.sanitizeHours(""))
+        assertEquals("0", TimeParser.sanitizeHours("0"))
+        assertEquals("09", TimeParser.sanitizeHours("09"))
+        assertEquals("17", TimeParser.sanitizeHours("17"))
+        assertEquals("23", TimeParser.sanitizeHours("23"))
+        assertEquals("17", TimeParser.sanitizeHours("17x5"))
     }
 
     @Test
-    fun formatInputDisplay_morningThreeDigits() {
-        assertEquals("08:10", TimeParser.formatInputDisplay("810"))
-        assertEquals("09:45", TimeParser.formatInputDisplay("945"))
+    fun sanitizeHours_dropsSecondDigitAbove23() {
+        assertEquals("2", TimeParser.sanitizeHours("24"))
+        assertEquals("8", TimeParser.sanitizeHours("81"))
     }
 
     @Test
-    fun formatInputDisplay_morningTwoDigits() {
-        assertEquals("08:1", TimeParser.formatInputDisplay("81"))
+    fun sanitizeMinutes_prefixesZeroForSixToNine() {
+        assertEquals("07", TimeParser.sanitizeMinutes("7"))
+        assertEquals("5", TimeParser.sanitizeMinutes("5"))
+        assertEquals("45", TimeParser.sanitizeMinutes("45"))
+        assertEquals("45", TimeParser.sanitizeMinutes("4567"))
     }
 
     @Test
-    fun formatInputDisplay_partialAfternoon() {
-        assertEquals("14:4", TimeParser.formatInputDisplay("144"))
+    fun isHoursComplete_singleDigitThreeToNine() {
+        assertTrue(TimeParser.isHoursComplete("8"))
+        assertTrue(TimeParser.isHoursComplete("3"))
+        assertTrue(TimeParser.isHoursComplete("09"))
+        assertTrue(TimeParser.isHoursComplete("17"))
+        assertFalse(TimeParser.isHoursComplete("1"))
+        assertFalse(TimeParser.isHoursComplete("2"))
+        assertFalse(TimeParser.isHoursComplete("0"))
+        assertFalse(TimeParser.isHoursComplete(""))
     }
 
     @Test
-    fun parseCompact_fourDigits() {
-        assertEquals(17 * 60 + 45, TimeParser.parseCompact("1745"))
-        assertEquals(14 * 60 + 44, TimeParser.parseCompact("1444"))
+    fun parseParts_validAndInvalid() {
+        assertEquals(8 * 60 + 10, TimeParser.parseParts("8", "10"))
+        assertEquals(8 * 60 + 10, TimeParser.parseParts("08", "10"))
+        assertEquals(17 * 60 + 45, TimeParser.parseParts("17", "45"))
+        assertEquals(0, TimeParser.parseParts("0", "00"))
+        assertNull(TimeParser.parseParts("", "10"))
+        assertNull(TimeParser.parseParts("8", ""))
+        assertNull(TimeParser.parseParts("8", "5"))
+        assertNull(TimeParser.parseParts("24", "00"))
+        assertNull(TimeParser.parseParts("12", "60"))
     }
 
     @Test
-    fun parseCompact_morningThreeDigits() {
-        assertEquals(8 * 60 + 10, TimeParser.parseCompact("810"))
-        assertEquals(9 * 60 + 11, TimeParser.parseCompact("911"))
-        assertEquals(7 * 60 + 30, TimeParser.parseCompact("730"))
+    fun timeFieldInput_roundTrip() {
+        val input = TimeFieldInput.fromMinutesOfDay(9 * 60 + 5)
+        assertEquals("09", input.hours)
+        assertEquals("05", input.minutes)
+        assertEquals(9 * 60 + 5, input.toMinutesOfDay())
+        assertTrue(TimeFieldInput.EMPTY.isEmpty)
+        assertNull(TimeFieldInput.EMPTY.toMinutesOfDay())
     }
 
     @Test
-    fun parseCompact_threeDigitsNonMorning() {
-        assertNull(TimeParser.parseCompact("630"))
-    }
-
-    @Test
-    fun parseCompact_invalid() {
-        assertNull(TimeParser.parseCompact("9999"))
-        assertNull(TimeParser.parseCompact("2460"))
-        assertNull(TimeParser.parseCompact("895"))
-    }
-
-    @Test
-    fun isValidTimeDigits() {
-        assertTrue(TimeParser.isValidTimeDigits("0900"))
-        assertTrue(TimeParser.isValidTimeDigits("810"))
-        assertFalse(TimeParser.isValidTimeDigits("9999"))
-        assertFalse(TimeParser.isValidTimeDigits("630"))
+    fun formatMinutes() {
+        assertEquals("08:10", TimeParser.formatMinutes(8 * 60 + 10))
+        assertEquals("00:00", TimeParser.formatMinutes(24 * 60))
     }
 
     @Test
@@ -77,5 +88,6 @@ class TimeParserTest {
         assertEquals("0:01:05", TimeParser.formatDurationSeconds(65))
         assertEquals("2:30:15", TimeParser.formatDurationSeconds(2 * 3600 + 30 * 60 + 15))
         assertEquals("0:00:00", TimeParser.formatDurationSeconds(-10))
+        assertEquals("10:00:00", TimeParser.formatDurationSeconds(36_000L))
     }
 }

@@ -11,6 +11,7 @@ import com.example.shikagera1.domain.BalanceCalculator
 import com.example.shikagera1.domain.DayRecord
 import com.example.shikagera1.domain.LeaveTimePredictor
 import com.example.shikagera1.domain.PeriodCalculator
+import com.example.shikagera1.domain.TimeFieldInput
 import com.example.shikagera1.domain.TimeParser
 import com.example.shikagera1.domain.WorkWeekCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,26 +34,30 @@ data class WeekDayItem(
     val departure: String?,
     val isToday: Boolean,
     val excludedMinutes: Int = 0,
+    val isCredited: Boolean = false,
     val isPreviousWeek: Boolean = false,
 )
 
 data class MainUiState(
     val todayLabel: String = "",
-    val weekBalanceMinutes: Int = 0,
+    val periodBalanceMinutes: Int = 0,
     val todayRecord: DayRecord? = null,
-    val isDayClosed: Boolean = false,
+    /** День закрыт по времени или зачтён — кнопки прихода/ухода не нужны. */
+    val isDayFinished: Boolean = false,
+    val isTodayCredited: Boolean = false,
     val predictedDeparture: String? = null,
     /** Minutes from midnight for predicted leave; used by live countdown timer. */
     val predictedDepartureMinutes: Int? = null,
     /** Arrival minutes from midnight when day is open; drives live elapsed timer. */
     val activeArrivalMinutes: Int? = null,
+    val todayExcludedMinutes: Int = 0,
     val currentWeekDays: List<WeekDayItem> = emptyList(),
     val previousWeekDays: List<WeekDayItem> = emptyList(),
     val showResetWarning: Boolean = false,
     val resetWarningMessage: String = "",
     val showResetConfirmDialog: Boolean = false,
-    val manualArrivalDigits: String = "",
-    val manualDepartureDigits: String = "",
+    val manualArrival: TimeFieldInput = TimeFieldInput.EMPTY,
+    val manualDeparture: TimeFieldInput = TimeFieldInput.EMPTY,
     val showExcludeSection: Boolean = false,
     val showPreviousWeek: Boolean = false,
     val excludeMinutesInput: String = "",
@@ -64,12 +69,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val preferences = UserPreferences(application)
     private val repository = TimeBalanceRepository(
         dao = AppDatabase.getInstance(application).dayEntryDao(),
-        preferences = preferences,
     )
 
     private val today = MutableStateFlow(LocalDate.now())
-    private val manualArrivalDigits = MutableStateFlow("")
-    private val manualDepartureDigits = MutableStateFlow("")
+    private val manualArrival = MutableStateFlow(TimeFieldInput.EMPTY)
+    private val manualDeparture = MutableStateFlow(TimeFieldInput.EMPTY)
     private val showExcludeSection = MutableStateFlow(false)
     private val excludeMinutesInput = MutableStateFlow("")
     private val editingDay = MutableStateFlow<DayRecord?>(null)
@@ -91,33 +95,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.observeRetainedRecords(date)
     }
 
-    private val prefsState = combine(
-        preferences.lastWarningBannerDate,
-        preferences.accumulatedBalanceMinutes,
-        preferences.manualResetDate,
-    ) { lastBannerDate, accumulatedBalance, manualResetDate ->
-        PrefsSlice(lastBannerDate, accumulatedBalance, manualResetDate)
-    }
-
     private val dataState = combine(
         recordsFlow,
-        prefsState,
+        preferences.lastWarningBannerDate,
+        preferences.manualResetDate,
         today,
-    ) { records, prefs, currentDate ->
+    ) { records, lastBannerDate, manualResetDate, currentDate ->
         DataSlice(
             records = records,
-            lastBannerDate = prefs.lastBannerDate,
-            accumulatedBalance = prefs.accumulatedBalance,
-            manualResetDate = prefs.manualResetDate,
+            lastBannerDate = lastBannerDate,
+            manualResetDate = manualResetDate,
             currentDate = currentDate,
         )
     }
 
     private val manualInputs = combine(
-        manualArrivalDigits,
-        manualDepartureDigits,
-    ) { arrivalDigits, departureDigits ->
-        arrivalDigits to departureDigits
+        manualArrival,
+        manualDeparture,
+    ) { arrival, departure ->
+        arrival to departure
     }
 
     private val excludeInputs = combine(
@@ -142,8 +138,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         showPreviousWeek,
     ) { manual, exclude, dialog, previousWeekVisible ->
         UiInputSlice(
-            arrivalDigits = manual.first,
-            departureDigits = manual.second,
+            arrival = manual.first,
+            departure = manual.second,
             excludeVisible = exclude.first,
             excludeInput = exclude.second,
             editing = dialog.editing,
@@ -202,24 +198,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onManualArrivalChanged(value: String) {
-        manualArrivalDigits.value = TimeParser.sanitizeDigits(value)
+    /** «Зачёт»: сегодняшний день засчитывается как полный рабочий. */
+    fun creditToday() {
+        setTodayCredited(true)
     }
 
-    fun onManualDepartureChanged(value: String) {
-        manualDepartureDigits.value = TimeParser.sanitizeDigits(value)
+    fun uncreditToday() {
+        setTodayCredited(false)
+    }
+
+    private fun setTodayCredited(credited: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setCredited(LocalDate.now(), credited)
+                inputError.value = null
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set credited", e)
+                inputError.value = "Не удалось сохранить зачёт"
+            }
+        }
+    }
+
+    fun onManualArrivalChanged(value: TimeFieldInput) {
+        manualArrival.value = value
+    }
+
+    fun onManualDepartureChanged(value: TimeFieldInput) {
+        manualDeparture.value = value
     }
 
     fun applyManualArrival() {
-        val digits = manualArrivalDigits.value
-        if (!TimeParser.isValidTimeDigits(digits)) {
-            inputError.value = "Введите время: 4 цифры (ЧЧММ) или 3 цифры для утра (810 → 08:10)"
+        val minutes = manualArrival.value.toMinutesOfDay()
+        if (minutes == null) {
+            inputError.value = TimeParser.TIME_INPUT_HINT
             return
         }
         viewModelScope.launch {
             try {
-                repository.updateArrival(LocalDate.now(), TimeParser.parseCompact(digits)!!)
-                manualArrivalDigits.value = ""
+                repository.updateArrival(LocalDate.now(), minutes)
+                manualArrival.value = TimeFieldInput.EMPTY
                 inputError.value = null
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to apply manual arrival", e)
@@ -229,15 +246,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyManualDeparture() {
-        val digits = manualDepartureDigits.value
-        if (!TimeParser.isValidTimeDigits(digits)) {
-            inputError.value = "Введите время: 4 цифры (ЧЧММ) или 3 цифры для утра (810 → 08:10)"
+        val minutes = manualDeparture.value.toMinutesOfDay()
+        if (minutes == null) {
+            inputError.value = TimeParser.TIME_INPUT_HINT
             return
         }
         viewModelScope.launch {
             try {
-                repository.updateDeparture(LocalDate.now(), TimeParser.parseCompact(digits)!!)
-                manualDepartureDigits.value = ""
+                repository.updateDeparture(LocalDate.now(), minutes)
+                manualDeparture.value = TimeFieldInput.EMPTY
                 inputError.value = null
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to apply manual departure", e)
@@ -332,7 +349,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun confirmResetBalance() {
         viewModelScope.launch {
             try {
-                preferences.resetWeeklyBalance(LocalDate.now())
+                preferences.resetBalance(LocalDate.now())
                 showResetConfirmDialog.value = false
                 inputError.value = null
             } catch (e: Exception) {
@@ -358,26 +375,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val manualResetDate = data.manualResetDate
 
         val todayRecord = records.find { it.date == currentDate }
-        val isDayClosed = todayRecord?.isClosed == true
-        val weekBalance = BalanceCalculator.totalBalance(
+        val isDayFinished = todayRecord?.isFinished == true
+        val isTodayCredited = todayRecord?.isCredited == true
+        val todayExcluded = todayRecord?.excludedMinutes ?: 0
+        val periodBalance = BalanceCalculator.periodBalance(
             records = records,
-            accumulatedBalanceMinutes = data.accumulatedBalance,
             today = currentDate,
             manualResetDate = manualResetDate,
         )
         val balanceBeforeToday = BalanceCalculator.balanceBeforeDate(
             records = records,
             date = currentDate,
-            accumulatedBalanceMinutes = data.accumulatedBalance,
             today = currentDate,
             manualResetDate = manualResetDate,
         )
 
-        val predictedDepartureMinutes = if (!isDayClosed) {
+        val predictedDepartureMinutes = if (!isDayFinished) {
             todayRecord?.arrivalMinutes?.let { arrival ->
                 LeaveTimePredictor.predictedDepartureMinutes(
                     arrivalMinutes = arrival,
                     balanceBeforeToday = balanceBeforeToday,
+                    excludedMinutes = todayExcluded,
                     date = currentDate,
                 )
             }
@@ -385,7 +403,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             null
         }
         val predictedDeparture = predictedDepartureMinutes?.let(TimeParser::formatMinutes)
-        val activeArrivalMinutes = if (!isDayClosed) todayRecord?.arrivalMinutes else null
+        val activeArrivalMinutes = if (!isDayFinished) todayRecord?.arrivalMinutes else null
 
         val locale = Locale.forLanguageTag("ru")
         val currentWeekDays = WorkWeekCalculator.visibleWorkDays(currentDate)
@@ -401,19 +419,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         return MainUiState(
             todayLabel = buildTodayLabel(currentDate),
-            weekBalanceMinutes = weekBalance,
+            periodBalanceMinutes = periodBalance,
             todayRecord = todayRecord,
-            isDayClosed = isDayClosed,
+            isDayFinished = isDayFinished,
+            isTodayCredited = isTodayCredited,
             predictedDeparture = predictedDeparture,
             predictedDepartureMinutes = predictedDepartureMinutes,
             activeArrivalMinutes = activeArrivalMinutes,
+            todayExcludedMinutes = todayExcluded,
             currentWeekDays = currentWeekDays,
             previousWeekDays = previousWeekDays,
             showResetWarning = showBanner,
             resetWarningMessage = PeriodCalculator.resetWarningMessage(currentDate),
             showResetConfirmDialog = inputs.resetDialog,
-            manualArrivalDigits = inputs.arrivalDigits,
-            manualDepartureDigits = inputs.departureDigits,
+            manualArrival = inputs.arrival,
+            manualDeparture = inputs.departure,
             showExcludeSection = inputs.excludeVisible,
             showPreviousWeek = inputs.showPreviousWeek,
             excludeMinutesInput = inputs.excludeInput,
@@ -446,6 +466,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             departure = record?.departureMinutes?.let(TimeParser::formatMinutes),
             isToday = date == currentDate,
             excludedMinutes = record?.excludedMinutes ?: 0,
+            isCredited = record?.isCredited == true,
             isPreviousWeek = isPreviousWeek,
         )
     }
@@ -463,16 +484,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return now.hour * 60 + now.minute
     }
 
-    private data class PrefsSlice(
-        val lastBannerDate: LocalDate?,
-        val accumulatedBalance: Int,
-        val manualResetDate: LocalDate?,
-    )
-
     private data class DataSlice(
         val records: List<DayRecord>,
         val lastBannerDate: LocalDate?,
-        val accumulatedBalance: Int,
         val manualResetDate: LocalDate?,
         val currentDate: LocalDate,
     )
@@ -484,8 +498,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private data class UiInputSlice(
-        val arrivalDigits: String,
-        val departureDigits: String,
+        val arrival: TimeFieldInput,
+        val departure: TimeFieldInput,
         val excludeVisible: Boolean,
         val excludeInput: String,
         val editing: DayRecord?,

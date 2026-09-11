@@ -1,6 +1,7 @@
 package com.example.shikagera1.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -20,16 +21,18 @@ class WorkWeekCalculatorTest {
     }
 
     @Test
-    fun retentionStartDate_isPreviousWeekMonday_whenEarlierThanPeriod() {
-        // Fri 17.07: previous Mon = 06.07, period start = 16.07 → keep from previous week.
-        val today = LocalDate.of(2026, 7, 17)
-        assertEquals(LocalDate.of(2026, 7, 6), WorkWeekCalculator.retentionStartDate(today))
+    fun retentionStartDate_isOneMonthBack() {
+        assertEquals(LocalDate.of(2026, 6, 17), WorkWeekCalculator.retentionStartDate(LocalDate.of(2026, 7, 17)))
+        // 31 марта минус месяц — конец февраля, без выхода за границы месяца.
+        assertEquals(LocalDate.of(2026, 2, 28), WorkWeekCalculator.retentionStartDate(LocalDate.of(2026, 3, 31)))
     }
 
     @Test
-    fun retentionStartDate_extendsToPeriodStart_whenEarlierThanPreviousWeek() {
-        // Wed 29.07: previous Mon = 20.07, period start = 16.07 → keep from 16.07 for balance.
-        val today = LocalDate.of(2026, 7, 29)
-        assertEquals(LocalDate.of(2026, 7, 16), WorkWeekCalculator.retentionStartDate(today))
+    fun retentionStartDate_alwaysCoversCurrentPeriodAndPreviousWeek() {
+        // Худший случай: 15-е число — период начался месяц назад, 16-го.
+        val today = LocalDate.of(2026, 8, 15)
+        val retention = WorkWeekCalculator.retentionStartDate(today)
+        assertTrue(!retention.isAfter(PeriodCalculator.currentPeriodStart(today)))
+        assertTrue(!retention.isAfter(WorkWeekCalculator.previousWeekMonday(today)))
     }
 }

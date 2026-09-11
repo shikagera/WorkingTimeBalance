@@ -12,6 +12,7 @@ data class DayEntryEntity(
     val departureMinutes: Int? = null,
     val note: String = "",
     val excludedMinutes: Int = 0,
+    val isCredited: Boolean = false,
 )
 
 fun DayEntryEntity.toDomain(): DayRecord = DayRecord(
@@ -20,6 +21,7 @@ fun DayEntryEntity.toDomain(): DayRecord = DayRecord(
     departureMinutes = departureMinutes,
     note = note,
     excludedMinutes = excludedMinutes,
+    isCredited = isCredited,
 )
 
 fun DayRecord.toEntity(): DayEntryEntity = DayEntryEntity(
@@ -28,4 +30,5 @@ fun DayRecord.toEntity(): DayEntryEntity = DayEntryEntity(
     departureMinutes = departureMinutes,
     note = note,
     excludedMinutes = excludedMinutes,
+    isCredited = isCredited,
 )

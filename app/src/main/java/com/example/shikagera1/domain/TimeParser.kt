@@ -1,48 +1,59 @@
 package com.example.shikagera1.domain
 
+/** Содержимое двух полей ввода времени: часы и минуты, только цифры. */
+data class TimeFieldInput(
+    val hours: String = "",
+    val minutes: String = "",
+) {
+    val isEmpty: Boolean
+        get() = hours.isEmpty() && minutes.isEmpty()
+
+    /** Минуты от полуночи, если оба поля заполнены корректно. */
+    fun toMinutesOfDay(): Int? = TimeParser.parseParts(hours, minutes)
+
+    companion object {
+        val EMPTY = TimeFieldInput()
+
+        fun fromMinutesOfDay(minutes: Int): TimeFieldInput {
+            val hours = (minutes / 60).coerceIn(0, 23)
+            val mins = (minutes % 60).coerceIn(0, 59)
+            return TimeFieldInput("%02d".format(hours), "%02d".format(mins))
+        }
+    }
+}
+
 object TimeParser {
-    fun sanitizeDigits(input: String): String = input.filter { it.isDigit() }.take(4)
+    const val TIME_INPUT_HINT = "Введите часы и минуты, например 8 : 10"
 
-    fun isMorningHourPrefix(digits: String): Boolean {
-        return digits.isNotEmpty() && digits.first() in '7'..'9'
+    /**
+     * Часы: до двух цифр. «3»…«9» — это уже целый час, вторая цифра
+     * сделала бы значение больше 23, поэтому она отбрасывается.
+     */
+    fun sanitizeHours(input: String): String {
+        val digits = input.filter { it.isDigit() }.take(2)
+        if (digits.length == 2 && digits.toInt() > 23) return digits.take(1)
+        return digits
     }
 
-    fun formatInputDisplay(digits: String): String {
-        val clean = sanitizeDigits(digits)
-        return when (clean.length) {
-            0 -> ""
-            1 -> clean
-            2 -> if (isMorningHourPrefix(clean)) "0${clean[0]}:${clean[1]}" else clean
-            3 -> if (isMorningHourPrefix(clean)) {
-                "0${clean[0]}:${clean.drop(1)}"
-            } else {
-                "${clean.take(2)}:${clean.drop(2)}"
-            }
-            else -> "${clean.take(2)}:${clean.drop(2).take(2)}"
-        }
+    /**
+     * Минуты: ровно две цифры. Первая цифра «6»…«9» не может быть десятками,
+     * значит это единицы — подставляем ведущий ноль («7» → «07»).
+     */
+    fun sanitizeMinutes(input: String): String {
+        val digits = input.filter { it.isDigit() }.take(2)
+        if (digits.length == 1 && digits[0] >= '6') return "0$digits"
+        return digits
     }
 
-    fun isValidTimeDigits(digits: String): Boolean {
-        val clean = sanitizeDigits(digits)
-        return parseCompact(clean) != null && (clean.length == 4 || (clean.length == 3 && isMorningHourPrefix(clean)))
+    /** Часы набраны полностью — пора переходить к минутам. */
+    fun isHoursComplete(hours: String): Boolean {
+        return hours.length == 2 || (hours.length == 1 && hours[0] >= '3')
     }
 
-    fun parseCompact(input: String): Int? {
-        val digits = sanitizeDigits(input)
-        if (digits.isEmpty()) return null
+    fun isMinutesComplete(minutes: String): Boolean = minutes.length == 2
 
-        return when (digits.length) {
-            3 -> if (isMorningHourPrefix(digits)) {
-                parseHoursMinutes("0${digits[0]}", digits.substring(1))
-            } else {
-                null
-            }
-            4 -> parseHoursMinutes(digits.substring(0, 2), digits.substring(2, 4))
-            else -> null
-        }
-    }
-
-    private fun parseHoursMinutes(hoursPart: String, minutesPart: String): Int? {
+    fun parseParts(hoursPart: String, minutesPart: String): Int? {
+        if (hoursPart.isEmpty() || minutesPart.length != 2) return null
         val hours = hoursPart.toIntOrNull() ?: return null
         val minutes = minutesPart.toIntOrNull() ?: return null
         return if (hours in 0..23 && minutes in 0..59) hours * 60 + minutes else null
@@ -64,11 +75,13 @@ object TimeParser {
     }
 
     /** Formats a non-negative duration as H:MM:SS or HH:MM:SS. */
-    fun formatDurationSeconds(totalSeconds: Int): String {
+    fun formatDurationSeconds(totalSeconds: Long): String {
         val safe = totalSeconds.coerceAtLeast(0)
         val hours = safe / 3600
         val minutes = (safe % 3600) / 60
         val seconds = safe % 60
         return "%d:%02d:%02d".format(hours, minutes, seconds)
     }
+
+    fun formatDurationSeconds(totalSeconds: Int): String = formatDurationSeconds(totalSeconds.toLong())
 }

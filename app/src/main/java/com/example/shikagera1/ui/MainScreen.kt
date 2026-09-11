@@ -16,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,14 +39,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.shikagera1.domain.BalanceCalculator
 import com.example.shikagera1.domain.DayRecord
+import com.example.shikagera1.domain.TimeFieldInput
 import com.example.shikagera1.domain.TimeParser
+import com.example.shikagera1.domain.WorkConstants
+import com.example.shikagera1.domain.WorkDayPhases
 import com.example.shikagera1.ui.components.TimeInputField
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.delay
+
+private val PositiveGreen = Color(0xFF4CAF50)
+private val NegativeRed = Color(0xFFE57373)
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
@@ -77,38 +85,39 @@ fun MainScreen(viewModel: MainViewModel) {
 
             item {
                 BalanceCard(
-                    balanceMinutes = state.weekBalanceMinutes,
+                    balanceMinutes = state.periodBalanceMinutes,
                     onResetClick = viewModel::requestResetBalance,
                 )
             }
 
-            if (!state.isDayClosed) {
-                item {
-                    ActionButtons(
-                        onClockIn = viewModel::clockIn,
-                        onClockOut = viewModel::clockOut,
-                    )
-                }
-            } else {
-                item {
-                    Text(
+            item {
+                when {
+                    state.isTodayCredited -> CreditedNotice(onUncredit = viewModel::uncreditToday)
+                    state.isDayFinished -> Text(
                         text = "День закрыт — измените время вручную",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    else -> ActionButtons(
+                        onClockIn = viewModel::clockIn,
+                        onClockOut = viewModel::clockOut,
+                        onCredit = viewModel::creditToday,
+                    )
                 }
             }
 
-            item {
-                ManualTimeInputs(
-                    arrivalDigits = state.manualArrivalDigits,
-                    departureDigits = state.manualDepartureDigits,
-                    onArrivalChanged = viewModel::onManualArrivalChanged,
-                    onDepartureChanged = viewModel::onManualDepartureChanged,
-                    onApplyArrival = viewModel::applyManualArrival,
-                    onApplyDeparture = viewModel::applyManualDeparture,
-                    error = state.inputError,
-                )
+            if (!state.isTodayCredited) {
+                item {
+                    ManualTimeInputs(
+                        arrival = state.manualArrival,
+                        departure = state.manualDeparture,
+                        onArrivalChanged = viewModel::onManualArrivalChanged,
+                        onDepartureChanged = viewModel::onManualDepartureChanged,
+                        onApplyArrival = viewModel::applyManualArrival,
+                        onApplyDeparture = viewModel::applyManualDeparture,
+                        error = state.inputError,
+                    )
+                }
             }
 
             state.predictedDeparture?.let { predicted ->
@@ -127,6 +136,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 item {
                     LiveWorkTimers(
                         arrivalMinutes = arrivalMinutes,
+                        excludedMinutes = state.todayExcludedMinutes,
                         predictedDepartureMinutes = state.predictedDepartureMinutes,
                     )
                 }
@@ -184,7 +194,7 @@ fun MainScreen(viewModel: MainViewModel) {
         AlertDialog(
             onDismissRequest = viewModel::dismissResetConfirmDialog,
             title = { Text("Сбросить баланс?") },
-            text = { Text("Баланс недели будет обнулён. Записи дней сохранятся.") },
+            text = { Text("Баланс периода будет обнулён. Записи дней сохранятся.") },
             confirmButton = {
                 TextButton(onClick = viewModel::confirmResetBalance) {
                     Text("Сбросить")
@@ -225,7 +235,7 @@ private fun WarningBanner(message: String, onDismiss: () -> Unit) {
 
 @Composable
 private fun BalanceCard(balanceMinutes: Int, onResetClick: () -> Unit) {
-    val color = if (balanceMinutes >= 0) Color(0xFF4CAF50) else Color(0xFFE57373)
+    val color = if (balanceMinutes >= 0) PositiveGreen else NegativeRed
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -237,7 +247,7 @@ private fun BalanceCard(balanceMinutes: Int, onResetClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = "Баланс недели", style = MaterialTheme.typography.labelLarge)
+            Text(text = "Баланс периода", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = TimeParser.formatBalance(balanceMinutes),
                 fontSize = 36.sp,
@@ -252,52 +262,87 @@ private fun BalanceCard(balanceMinutes: Int, onResetClick: () -> Unit) {
 }
 
 @Composable
-private fun ActionButtons(onClockIn: () -> Unit, onClockOut: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Button(
-            onClick = onClockIn,
-            modifier = Modifier.weight(1f),
+private fun ActionButtons(onClockIn: () -> Unit, onClockOut: () -> Unit, onCredit: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Я пришёл")
+            Button(
+                onClick = onClockIn,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Я пришёл")
+            }
+            OutlinedButton(
+                onClick = onClockOut,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Я ушёл")
+            }
         }
-        OutlinedButton(
-            onClick = onClockOut,
-            modifier = Modifier.weight(1f),
+        TextButton(
+            onClick = onCredit,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Я ушёл")
+            Text("Зачёт — засчитать как полный рабочий день")
+        }
+    }
+}
+
+@Composable
+private fun CreditedNotice(onUncredit: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Зачёт: день засчитан как полный рабочий",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            TextButton(onClick = onUncredit) {
+                Text("Отменить зачёт")
+            }
         }
     }
 }
 
 @Composable
 private fun ManualTimeInputs(
-    arrivalDigits: String,
-    departureDigits: String,
-    onArrivalChanged: (String) -> Unit,
-    onDepartureChanged: (String) -> Unit,
+    arrival: TimeFieldInput,
+    departure: TimeFieldInput,
+    onArrivalChanged: (TimeFieldInput) -> Unit,
+    onDepartureChanged: (TimeFieldInput) -> Unit,
     onApplyArrival: () -> Unit,
     onApplyDeparture: () -> Unit,
     error: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "Ручной ввод времени", style = MaterialTheme.typography.labelMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
             TimeInputField(
-                digits = arrivalDigits,
-                onDigitsChanged = onArrivalChanged,
+                value = arrival,
+                onValueChange = onArrivalChanged,
                 label = "Приход",
+                onDone = onApplyArrival,
                 modifier = Modifier.weight(1f),
             )
             Button(onClick = onApplyArrival) { Text("OK") }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
             TimeInputField(
-                digits = departureDigits,
-                onDigitsChanged = onDepartureChanged,
+                value = departure,
+                onValueChange = onDepartureChanged,
                 label = "Уход",
+                onDone = onApplyDeparture,
                 modifier = Modifier.weight(1f),
             )
             Button(onClick = onApplyDeparture) { Text("OK") }
@@ -342,7 +387,7 @@ private fun ExcludeSection(
                     value = excludeInput,
                     onValueChange = onInputChanged,
                     label = { Text("Минуты отсутствия") },
-                    placeholder = { Text("45") },
+                    placeholder = { Text("30") },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -350,7 +395,7 @@ private fun ExcludeSection(
                 Button(onClick = onApply) { Text("OK") }
             }
             Text(
-                text = "Это время не войдёт в рабочий день",
+                text = "Это время не войдёт в рабочий день (обед ${WorkConstants.BREAK_MINUTES} мин вычитается сам)",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -358,13 +403,19 @@ private fun ExcludeSection(
     }
 }
 
+/**
+ * Живой таймер дня по фазам: 1-я половина → перерыв → 2-я половина.
+ * После расчётного времени ухода счётчик «До ухода» сменяется
+ * на растущую «Переработку».
+ */
 @Composable
 private fun LiveWorkTimers(
     arrivalMinutes: Int,
+    excludedMinutes: Int,
     predictedDepartureMinutes: Int?,
 ) {
     var nowEpochMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(arrivalMinutes, predictedDepartureMinutes) {
+    LaunchedEffect(arrivalMinutes, excludedMinutes, predictedDepartureMinutes) {
         while (true) {
             nowEpochMs = System.currentTimeMillis()
             delay(1_000)
@@ -373,17 +424,26 @@ private fun LiveWorkTimers(
 
     val zone = ZoneId.systemDefault()
     val todayStart = LocalDate.now(zone).atStartOfDay(zone)
+    val now = java.time.Instant.ofEpochMilli(nowEpochMs)
     val arrivalInstant = todayStart.plusMinutes(arrivalMinutes.toLong()).toInstant()
-    val elapsedSeconds = ChronoUnit.SECONDS
-        .between(arrivalInstant, java.time.Instant.ofEpochMilli(nowEpochMs))
-        .toInt()
+    val presenceSeconds = (ChronoUnit.SECONDS.between(arrivalInstant, now) - excludedMinutes * 60L)
         .coerceAtLeast(0)
 
-    val countdownSeconds = predictedDepartureMinutes?.let { leaveMinutes ->
+    val phase = WorkDayPhases.phaseSeconds(presenceSeconds)
+    val workedSeconds = WorkDayPhases.workedSeconds(presenceSeconds)
+    val phaseLeftSeconds = WorkDayPhases.secondsLeftInPhase(presenceSeconds)
+
+    // Фиксированный день: 4ч + 45м + 4ч от прихода, баланс прошлых дней не учитывается.
+    val normMinutes = BalanceCalculator.dailyNormMinutes(LocalDate.now(zone))
+    val dayEndPresenceMinutes = WorkDayPhases.presenceForWorkMinutes(normMinutes)
+    val dayEndMinutes = arrivalMinutes + dayEndPresenceMinutes + excludedMinutes
+    val dayEndPresenceSeconds = dayEndPresenceMinutes * 60L
+    val untilDayEndSeconds = dayEndPresenceSeconds - presenceSeconds
+
+    // Уход с учётом баланса: раньше конца дня при плюсе, позже при долге.
+    val untilLeaveSeconds = predictedDepartureMinutes?.let { leaveMinutes ->
         val leaveInstant = todayStart.plusMinutes(leaveMinutes.toLong()).toInstant()
-        ChronoUnit.SECONDS
-            .between(java.time.Instant.ofEpochMilli(nowEpochMs), leaveInstant)
-            .toInt()
+        ChronoUnit.SECONDS.between(now, leaveInstant)
     }
 
     Card(
@@ -397,23 +457,53 @@ private fun LiveWorkTimers(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TimerRow(
-                label = "На работе",
-                value = TimeParser.formatDurationSeconds(elapsedSeconds),
+                label = "Отработано",
+                value = TimeParser.formatDurationSeconds(workedSeconds),
                 valueColor = MaterialTheme.colorScheme.onSurface,
             )
-            if (countdownSeconds != null) {
-                if (countdownSeconds > 0) {
+            when (phase) {
+                WorkDayPhases.Phase.FIRST_HALF -> TimerRow(
+                    label = "1-я половина · до перерыва",
+                    value = TimeParser.formatDurationSeconds(phaseLeftSeconds),
+                    valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                WorkDayPhases.Phase.BREAK -> TimerRow(
+                    label = "Перерыв · осталось",
+                    value = TimeParser.formatDurationSeconds(phaseLeftSeconds),
+                    valueColor = MaterialTheme.colorScheme.tertiary,
+                )
+                WorkDayPhases.Phase.SECOND_HALF -> Text(
+                    text = "2-я половина дня",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (untilDayEndSeconds > 0) {
+                TimerRow(
+                    label = "До конца дня",
+                    value = TimeParser.formatDurationSeconds(untilDayEndSeconds),
+                    valueColor = MaterialTheme.colorScheme.onSurface,
+                )
+            } else {
+                TimerRow(
+                    label = "Переработка сегодня",
+                    value = "+" + TimeParser.formatDurationSeconds(-untilDayEndSeconds),
+                    valueColor = PositiveGreen,
+                )
+            }
+            if (untilLeaveSeconds != null && predictedDepartureMinutes != dayEndMinutes) {
+                if (untilLeaveSeconds > 0) {
                     TimerRow(
-                        label = "До ухода",
-                        value = TimeParser.formatDurationSeconds(countdownSeconds),
+                        label = "До ухода · с балансом",
+                        value = TimeParser.formatDurationSeconds(untilLeaveSeconds),
                         valueColor = MaterialTheme.colorScheme.primary,
                     )
                 } else {
                     Text(
-                        text = "Можно уходить",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Баланс закрыт — можно уходить",
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50),
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -448,15 +538,16 @@ private fun TodaySummary(today: DayRecord) {
     val arrival = today.arrivalMinutes?.let(TimeParser::formatMinutes) ?: "—"
     val departure = today.departureMinutes?.let(TimeParser::formatMinutes) ?: "—"
     val excluded = if (today.excludedMinutes > 0) ", не учтено ${today.excludedMinutes} мин" else ""
+    val credited = if (today.isCredited) ", зачёт" else ""
     Text(
-        text = "Сегодня (${today.date.format(formatter)}): $arrival → $departure$excluded",
+        text = "Сегодня (${today.date.format(formatter)}): $arrival → $departure$excluded$credited",
         style = MaterialTheme.typography.bodyMedium,
     )
 }
 
 @Composable
 private fun WeekDayRow(day: WeekDayItem, onClick: () -> Unit) {
-    val balanceColor = if (day.balanceMinutes >= 0) Color(0xFF4CAF50) else Color(0xFFE57373)
+    val balanceColor = if (day.balanceMinutes >= 0) PositiveGreen else NegativeRed
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -472,8 +563,8 @@ private fun WeekDayRow(day: WeekDayItem, onClick: () -> Unit) {
                     fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
                 )
                 Text(
-                    text = TimeParser.formatBalance(day.balanceMinutes),
-                    color = balanceColor,
+                    text = if (day.isCredited) "зачёт" else TimeParser.formatBalance(day.balanceMinutes),
+                    color = if (day.isCredited) MaterialTheme.colorScheme.secondary else balanceColor,
                 )
             }
             if (day.arrival != null || day.departure != null) {
@@ -517,16 +608,17 @@ private fun DayEditDialogContent(
     onDismiss: () -> Unit,
     onSave: (DayRecord) -> Unit,
 ) {
-    var arrivalDigits by remember(record.date) {
-        mutableStateOf(record.arrivalMinutes?.let(::minutesToDigits).orEmpty())
+    var arrival by remember(record.date) {
+        mutableStateOf(record.arrivalMinutes?.let(TimeFieldInput::fromMinutesOfDay) ?: TimeFieldInput.EMPTY)
     }
-    var departureDigits by remember(record.date) {
-        mutableStateOf(record.departureMinutes?.let(::minutesToDigits).orEmpty())
+    var departure by remember(record.date) {
+        mutableStateOf(record.departureMinutes?.let(TimeFieldInput::fromMinutesOfDay) ?: TimeFieldInput.EMPTY)
     }
     var note by remember(record.date) { mutableStateOf(record.note) }
     var excluded by remember(record.date) {
         mutableStateOf(record.excludedMinutes.toString().takeIf { record.excludedMinutes > 0 }.orEmpty())
     }
+    var credited by remember(record.date) { mutableStateOf(record.isCredited) }
     var error by remember(record.date) { mutableStateOf<String?>(null) }
 
     val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
@@ -537,13 +629,13 @@ private fun DayEditDialogContent(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeInputField(
-                    digits = arrivalDigits,
-                    onDigitsChanged = { arrivalDigits = it },
+                    value = arrival,
+                    onValueChange = { arrival = it },
                     label = "Приход",
                 )
                 TimeInputField(
-                    digits = departureDigits,
-                    onDigitsChanged = { departureDigits = it },
+                    value = departure,
+                    onValueChange = { departure = it },
                     label = "Уход",
                 )
                 OutlinedTextField(
@@ -553,6 +645,15 @@ private fun DayEditDialogContent(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { credited = !credited },
+                ) {
+                    Checkbox(checked = credited, onCheckedChange = { credited = it })
+                    Text("Зачёт — полный рабочий день")
+                }
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -564,16 +665,12 @@ private fun DayEditDialogContent(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val arrivalMinutes = arrivalDigits.takeIf { it.isNotBlank() }?.let {
-                        if (TimeParser.isValidTimeDigits(it)) TimeParser.parseCompact(it) else null
-                    }
-                    val departureMinutes = departureDigits.takeIf { it.isNotBlank() }?.let {
-                        if (TimeParser.isValidTimeDigits(it)) TimeParser.parseCompact(it) else null
-                    }
-                    if ((arrivalDigits.isNotBlank() && arrivalMinutes == null) ||
-                        (departureDigits.isNotBlank() && departureMinutes == null)
+                    val arrivalMinutes = arrival.takeIf { !it.isEmpty }?.toMinutesOfDay()
+                    val departureMinutes = departure.takeIf { !it.isEmpty }?.toMinutesOfDay()
+                    if ((!arrival.isEmpty && arrivalMinutes == null) ||
+                        (!departure.isEmpty && departureMinutes == null)
                     ) {
-                        error = "Введите время: 4 цифры (ЧЧММ) или 3 цифры для утра (810 → 08:10)"
+                        error = TimeParser.TIME_INPUT_HINT
                         return@TextButton
                     }
                     onSave(
@@ -582,6 +679,7 @@ private fun DayEditDialogContent(
                             departureMinutes = departureMinutes,
                             note = note.trim(),
                             excludedMinutes = excluded.toIntOrNull() ?: 0,
+                            isCredited = credited,
                         ),
                     )
                 },
@@ -593,10 +691,4 @@ private fun DayEditDialogContent(
             TextButton(onClick = onDismiss) { Text("Отмена") }
         },
     )
-}
-
-private fun minutesToDigits(minutes: Int): String {
-    val hours = (minutes / 60).coerceIn(0, 23)
-    val mins = (minutes % 60).coerceIn(0, 59)
-    return "%02d%02d".format(hours, mins)
 }

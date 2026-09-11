@@ -1,8 +1,6 @@
 package com.example.shikagera1.data
 
-import com.example.shikagera1.domain.BalanceCalculator
 import com.example.shikagera1.domain.DayRecord
-import com.example.shikagera1.domain.PeriodCalculator
 import com.example.shikagera1.domain.WorkWeekCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -10,15 +8,10 @@ import java.time.LocalDate
 
 class TimeBalanceRepository(
     private val dao: DayEntryDao,
-    private val preferences: UserPreferences,
 ) {
     fun observeRetainedRecords(today: LocalDate): Flow<List<DayRecord>> {
         val rangeStart = WorkWeekCalculator.retentionStartDate(today)
-        val rangeEnd = maxOf(
-            WorkWeekCalculator.currentWeekFriday(today),
-            WorkWeekCalculator.previousWeekMonday(today).plusDays(4),
-            today,
-        )
+        val rangeEnd = maxOf(WorkWeekCalculator.currentWeekFriday(today), today)
 
         return dao.observeRange(rangeStart.toString(), rangeEnd.toString()).map { entries ->
             entries.map { it.toDomain() }
@@ -48,20 +41,17 @@ class TimeBalanceRepository(
         saveDay(existing.copy(excludedMinutes = excludedMinutes.coerceAtLeast(0)))
     }
 
+    suspend fun setCredited(date: LocalDate, credited: Boolean) {
+        val existing = getDay(date) ?: DayRecord(date = date)
+        saveDay(existing.copy(isCredited = credited))
+    }
+
+    /**
+     * Удаляет записи старше срока хранения. Они всегда лежат до начала
+     * текущего периода, поэтому на баланс не влияют.
+     */
     suspend fun purgeExpiredRecords(today: LocalDate = LocalDate.now()) {
-        preferences.syncPeriodAccumulatedBalance(today)
-
         val cutoff = WorkWeekCalculator.retentionStartDate(today)
-        val expired = dao.getBefore(cutoff.toString())
-        if (expired.isEmpty()) return
-
-        val periodStart = PeriodCalculator.currentPeriodStart(today)
-        // Only fold days that still belong to the active period into carry-over.
-        val expiredBalance = expired
-            .map { it.toDomain() }
-            .filter { !it.date.isBefore(periodStart) }
-            .sumOf(BalanceCalculator::dailyBalance)
-        preferences.addToAccumulatedBalance(expiredBalance)
         dao.deleteBefore(cutoff.toString())
     }
 }

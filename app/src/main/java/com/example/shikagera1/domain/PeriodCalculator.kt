@@ -38,10 +38,10 @@ object PeriodCalculator {
 
     fun resetWarningMessage(today: LocalDate = LocalDate.now()): String {
         val resetDate = nextResetDate(today)
-        return "Через 2 дня баланс недели будет сброшен (${resetDate.dayOfMonth}-го числа)"
+        return "Через 2 дня баланс периода будет сброшен (${resetDate.dayOfMonth}-го числа)"
     }
 
-    fun isWeeklyResetDay(today: LocalDate = LocalDate.now()): Boolean {
+    fun isPeriodResetDay(today: LocalDate = LocalDate.now()): Boolean {
         return today.dayOfMonth == WorkConstants.PERIOD_START_DAY
     }
 }
