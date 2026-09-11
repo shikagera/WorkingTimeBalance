@@ -21,15 +21,15 @@ class WorkWeekCalculatorTest {
 
     @Test
     fun retentionStartDate_isPreviousWeekMonday_whenEarlierThanPeriod() {
-        val today = LocalDate.of(2026, 7, 9)
-        // Previous week Mon 29.06; period start 08.07 → keep from previous week.
-        assertEquals(LocalDate.of(2026, 6, 29), WorkWeekCalculator.retentionStartDate(today))
+        // Fri 17.07: previous Mon = 06.07, period start = 16.07 → keep from previous week.
+        val today = LocalDate.of(2026, 7, 17)
+        assertEquals(LocalDate.of(2026, 7, 6), WorkWeekCalculator.retentionStartDate(today))
     }
 
     @Test
     fun retentionStartDate_extendsToPeriodStart_whenEarlierThanPreviousWeek() {
-        // Wed 22.07: previous Mon = 13.07, period start = 08.07 → keep from 08.07 for balance.
-        val today = LocalDate.of(2026, 7, 22)
-        assertEquals(LocalDate.of(2026, 7, 8), WorkWeekCalculator.retentionStartDate(today))
+        // Wed 29.07: previous Mon = 20.07, period start = 16.07 → keep from 16.07 for balance.
+        val today = LocalDate.of(2026, 7, 29)
+        assertEquals(LocalDate.of(2026, 7, 16), WorkWeekCalculator.retentionStartDate(today))
     }
 }

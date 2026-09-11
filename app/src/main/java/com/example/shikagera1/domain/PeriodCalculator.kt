@@ -10,37 +10,23 @@ object PeriodCalculator {
     }
 
     fun currentPeriodStart(today: LocalDate = LocalDate.now()): LocalDate {
-        return if (today.dayOfMonth >= WorkConstants.PERIOD_START_FIRST &&
-            today.dayOfMonth < WorkConstants.PERIOD_START_SECOND
-        ) {
-            today.withDayOfMonth(WorkConstants.PERIOD_START_FIRST)
-        } else if (today.dayOfMonth >= WorkConstants.PERIOD_START_SECOND) {
-            today.withDayOfMonth(WorkConstants.PERIOD_START_SECOND)
+        return if (today.dayOfMonth >= WorkConstants.PERIOD_START_DAY) {
+            today.withDayOfMonth(WorkConstants.PERIOD_START_DAY)
         } else {
-            today.minusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_SECOND)
+            today.minusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_DAY)
         }
     }
 
     fun currentPeriodEnd(today: LocalDate = LocalDate.now()): LocalDate {
-        return if (today.dayOfMonth >= WorkConstants.PERIOD_START_FIRST &&
-            today.dayOfMonth < WorkConstants.PERIOD_START_SECOND
-        ) {
-            today.withDayOfMonth(WorkConstants.PERIOD_START_SECOND - 1)
-        } else if (today.dayOfMonth >= WorkConstants.PERIOD_START_SECOND) {
-            today.plusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_FIRST - 1)
-        } else {
-            today.withDayOfMonth(WorkConstants.PERIOD_START_FIRST - 1)
-        }
+        return currentPeriodStart(today).plusMonths(1).minusDays(1)
     }
 
     fun nextResetDate(today: LocalDate = LocalDate.now()): LocalDate {
-        val firstReset = today.withDayOfMonth(WorkConstants.PERIOD_START_FIRST)
-        val secondReset = today.withDayOfMonth(WorkConstants.PERIOD_START_SECOND)
-
-        return when {
-            today.isBefore(firstReset) -> firstReset
-            today.isBefore(secondReset) -> secondReset
-            else -> today.plusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_FIRST)
+        val thisMonthReset = today.withDayOfMonth(WorkConstants.PERIOD_START_DAY)
+        return if (today.isBefore(thisMonthReset)) {
+            thisMonthReset
+        } else {
+            today.plusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_DAY)
         }
     }
 
@@ -56,7 +42,6 @@ object PeriodCalculator {
     }
 
     fun isWeeklyResetDay(today: LocalDate = LocalDate.now()): Boolean {
-        return today.dayOfMonth == WorkConstants.PERIOD_START_FIRST ||
-            today.dayOfMonth == WorkConstants.PERIOD_START_SECOND
+        return today.dayOfMonth == WorkConstants.PERIOD_START_DAY
     }
 }

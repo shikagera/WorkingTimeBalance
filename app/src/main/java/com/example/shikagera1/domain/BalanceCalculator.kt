@@ -19,20 +19,17 @@ object BalanceCalculator {
         return (gross - record.excludedMinutes).coerceAtLeast(0)
     }
 
+    /**
+     * Day balance only after the day is closed (both arrival and departure).
+     * An open day (only "пришёл") does not subtract the daily norm from the total.
+     */
     fun dailyBalance(record: DayRecord): Int {
+        if (!record.isClosed) return 0
         return workedMinutes(record) - dailyNormMinutes(record.date)
     }
 
     fun lastWeeklyResetDate(today: LocalDate = LocalDate.now()): LocalDate {
-        val candidates = listOf(
-            today.withDayOfMonth(WorkConstants.PERIOD_START_FIRST),
-            today.withDayOfMonth(WorkConstants.PERIOD_START_SECOND),
-            today.minusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_FIRST),
-            today.minusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_SECOND),
-        ).filter { !it.isAfter(today) }
-
-        return candidates.maxOrNull()
-            ?: today.minusMonths(1).withDayOfMonth(WorkConstants.PERIOD_START_SECOND)
+        return PeriodCalculator.currentPeriodStart(today)
     }
 
     fun isAfterManualReset(recordDate: LocalDate, manualResetDate: LocalDate?): Boolean {
@@ -40,7 +37,7 @@ object BalanceCalculator {
     }
 
     /**
-     * Balance of all days from the period reset (8th/23rd) through [today],
+     * Balance of all days from the period reset (16th) through [today],
      * including previous calendar weeks still inside the period.
      */
     fun currentWeekBalance(

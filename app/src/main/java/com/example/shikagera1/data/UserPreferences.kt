@@ -39,7 +39,7 @@ class UserPreferences(private val context: Context) {
     }
 
     /**
-     * Zero carry-over when a new pay period starts (8th / 23rd).
+     * Zero carry-over when a new pay period starts (16th of each month).
      */
     suspend fun syncPeriodAccumulatedBalance(
         today: LocalDate = LocalDate.now(),
