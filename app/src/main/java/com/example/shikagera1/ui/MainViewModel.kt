@@ -32,6 +32,8 @@ data class WeekDayItem(
     val note: String,
     val arrival: String?,
     val departure: String?,
+    /** Заполнено, только если уход позже 20:00 и засчитано меньше введённого. */
+    val countedDeparture: String? = null,
     val isToday: Boolean,
     val excludedMinutes: Int = 0,
     val isCredited: Boolean = false,
@@ -464,6 +466,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             note = record?.note.orEmpty(),
             arrival = record?.arrivalMinutes?.let(TimeParser::formatMinutes),
             departure = record?.departureMinutes?.let(TimeParser::formatMinutes),
+            countedDeparture = record?.departureMinutes
+                ?.let(BalanceCalculator::countedDepartureMinutes)
+                ?.takeIf { it != record.departureMinutes }
+                ?.let(TimeParser::formatMinutes),
             isToday = date == currentDate,
             excludedMinutes = record?.excludedMinutes ?: 0,
             isCredited = record?.isCredited == true,

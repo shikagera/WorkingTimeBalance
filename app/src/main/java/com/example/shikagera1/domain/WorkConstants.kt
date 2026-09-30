@@ -7,6 +7,11 @@ object WorkConstants {
     const val FIRST_HALF_MINUTES = 240
     /** Обеденный перерыв между половинами дня, в норму не входит. */
     const val BREAK_MINUTES = 45
+    /**
+     * Позже 20:00 работа не засчитывается: уход в 20:40 или 23:10
+     * считается как уход в 20:00. Введённое время при этом сохраняется как есть.
+     */
+    const val MAX_COUNTED_DEPARTURE_MINUTES = 20 * 60
     /** Day of month when the balance period resets (once per month). */
     const val PERIOD_START_DAY = 16
     const val RESET_WARNING_DAYS_BEFORE = 2

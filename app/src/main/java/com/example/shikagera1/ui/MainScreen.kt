@@ -426,7 +426,12 @@ private fun LiveWorkTimers(
     val todayStart = LocalDate.now(zone).atStartOfDay(zone)
     val now = java.time.Instant.ofEpochMilli(nowEpochMs)
     val arrivalInstant = todayStart.plusMinutes(arrivalMinutes.toLong()).toInstant()
-    val presenceSeconds = (ChronoUnit.SECONDS.between(arrivalInstant, now) - excludedMinutes * 60L)
+    // После 20:00 время не засчитывается — таймер там останавливается.
+    val countedEnd = todayStart
+        .plusMinutes(WorkConstants.MAX_COUNTED_DEPARTURE_MINUTES.toLong())
+        .toInstant()
+    val countedNow = if (now.isAfter(countedEnd)) countedEnd else now
+    val presenceSeconds = (ChronoUnit.SECONDS.between(arrivalInstant, countedNow) - excludedMinutes * 60L)
         .coerceAtLeast(0)
 
     val phase = WorkDayPhases.phaseSeconds(presenceSeconds)
@@ -461,6 +466,14 @@ private fun LiveWorkTimers(
                 value = TimeParser.formatDurationSeconds(workedSeconds),
                 valueColor = MaterialTheme.colorScheme.onSurface,
             )
+            if (now.isAfter(countedEnd)) {
+                Text(
+                    text = "После ${TimeParser.formatMinutes(WorkConstants.MAX_COUNTED_DEPARTURE_MINUTES)} " +
+                        "время не засчитывается",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             when (phase) {
                 WorkDayPhases.Phase.FIRST_HALF -> TimerRow(
                     label = "1-я половина · до перерыва",
@@ -568,8 +581,9 @@ private fun WeekDayRow(day: WeekDayItem, onClick: () -> Unit) {
                 )
             }
             if (day.arrival != null || day.departure != null) {
+                val counted = day.countedDeparture?.let { " (засчитано $it)" }.orEmpty()
                 Text(
-                    text = "${day.arrival ?: "—"} → ${day.departure ?: "—"}",
+                    text = "${day.arrival ?: "—"} → ${day.departure ?: "—"}$counted",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

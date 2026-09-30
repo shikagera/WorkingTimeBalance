@@ -18,6 +18,15 @@ class TimeParserTest {
     }
 
     @Test
+    fun sanitizeHours_expandsTypedTwoToTwenty() {
+        assertEquals("20", TimeParser.sanitizeHours("2"))
+        assertEquals("20", TimeParser.sanitizeHours("2", previous = ""))
+        // Стирание цифры из «20» не должно возвращать «20» обратно.
+        assertEquals("2", TimeParser.sanitizeHours("2", previous = "20"))
+        assertEquals("21", TimeParser.sanitizeHours("21", previous = "2"))
+    }
+
+    @Test
     fun sanitizeHours_dropsSecondDigitAbove23() {
         assertEquals("2", TimeParser.sanitizeHours("24"))
         assertEquals("8", TimeParser.sanitizeHours("81"))

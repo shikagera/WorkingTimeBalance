@@ -40,6 +40,46 @@ class BalanceCalculatorTest {
     }
 
     @Test
+    fun presenceMinutes_capsDepartureAtEight() {
+        // 9:00 → 23:10 засчитывается как 9:00 → 20:00: 11ч присутствия.
+        val lateNight = DayRecord(
+            date = LocalDate.of(2026, 7, 7),
+            arrivalMinutes = 9 * 60,
+            departureMinutes = 23 * 60 + 10,
+        )
+        assertEquals(11 * 60, BalanceCalculator.presenceMinutes(lateNight))
+        assertEquals(11 * 60 - 45, BalanceCalculator.workedMinutes(lateNight))
+
+        // 20:40 и 23:10 дают один и тот же результат — оба обрезаны до 20:00.
+        val justAfterEight = lateNight.copy(departureMinutes = 20 * 60 + 40)
+        assertEquals(
+            BalanceCalculator.dailyBalance(lateNight),
+            BalanceCalculator.dailyBalance(justAfterEight),
+        )
+
+        // Ровно 20:00 не обрезается.
+        val exactlyEight = lateNight.copy(departureMinutes = 20 * 60)
+        assertEquals(11 * 60, BalanceCalculator.presenceMinutes(exactlyEight))
+    }
+
+    @Test
+    fun presenceMinutes_isZeroWhenWholeShiftIsAfterCap() {
+        val nightShift = DayRecord(
+            date = LocalDate.of(2026, 7, 7),
+            arrivalMinutes = 21 * 60,
+            departureMinutes = 23 * 60,
+        )
+        assertEquals(0, BalanceCalculator.presenceMinutes(nightShift))
+    }
+
+    @Test
+    fun countedDepartureMinutes_clampsToCap() {
+        assertEquals(20 * 60, BalanceCalculator.countedDepartureMinutes(23 * 60 + 10))
+        assertEquals(20 * 60, BalanceCalculator.countedDepartureMinutes(20 * 60))
+        assertEquals(18 * 60, BalanceCalculator.countedDepartureMinutes(18 * 60))
+    }
+
+    @Test
     fun dailyBalance_openDayDoesNotCount() {
         val onlyArrival = DayRecord(
             date = LocalDate.of(2026, 7, 20),

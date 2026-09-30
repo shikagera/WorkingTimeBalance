@@ -26,12 +26,15 @@ object TimeParser {
     const val TIME_INPUT_HINT = "Введите часы и минуты, например 8 : 10"
 
     /**
-     * Часы: до двух цифр. Вернувшись в поле, можно дописать «20»…«23»;
-     * вторая цифра, дающая больше 23, отбрасывается.
+     * Часы: до двух цифр, вторая цифра сверх 23 отбрасывается.
+     * Набранная «2» сразу разворачивается в «20» — позже работа не засчитывается.
+     * [previous] нужен, чтобы отличить набор от стирания: иначе из «20»
+     * нельзя было бы удалить цифру, «2» снова становилась бы «20».
      */
-    fun sanitizeHours(input: String): String {
+    fun sanitizeHours(input: String, previous: String = ""): String {
         val digits = input.filter { it.isDigit() }.take(2)
         if (digits.length == 2 && digits.toInt() > 23) return digits.take(1)
+        if (digits == "2" && previous.length <= digits.length) return "20"
         return digits
     }
 

@@ -61,7 +61,7 @@ fun TimeInputField(
         Row(verticalAlignment = Alignment.CenterVertically) {
             DigitBox(
                 text = value.hours,
-                onTextChange = { onValueChange(value.copy(hours = TimeParser.sanitizeHours(it))) },
+                onTextChange = { onValueChange(value.copy(hours = TimeParser.sanitizeHours(it, value.hours))) },
                 placeholder = "ЧЧ",
                 enabled = enabled,
                 imeAction = ImeAction.Next,

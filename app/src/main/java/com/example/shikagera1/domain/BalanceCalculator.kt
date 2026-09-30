@@ -11,12 +11,21 @@ object BalanceCalculator {
         }
     }
 
-    /** Присутствие: от прихода до ухода минус исключённые минуты. */
+    /**
+     * Присутствие: от прихода до ухода минус исключённые минуты.
+     * Уход позже [WorkConstants.MAX_COUNTED_DEPARTURE_MINUTES] считается как уход в 20:00.
+     */
     fun presenceMinutes(record: DayRecord): Int {
         val arrival = record.arrivalMinutes ?: return 0
         val departure = record.departureMinutes ?: return 0
-        if (departure < arrival) return 0
-        return (departure - arrival - record.excludedMinutes).coerceAtLeast(0)
+        val counted = countedDepartureMinutes(departure)
+        if (counted < arrival) return 0
+        return (counted - arrival - record.excludedMinutes).coerceAtLeast(0)
+    }
+
+    /** Время ухода, обрезанное по потолку засчитываемого дня. */
+    fun countedDepartureMinutes(departureMinutes: Int): Int {
+        return departureMinutes.coerceAtMost(WorkConstants.MAX_COUNTED_DEPARTURE_MINUTES)
     }
 
     /** Чистая работа: присутствие без обеденного перерыва (см. [WorkDayPhases]). */
